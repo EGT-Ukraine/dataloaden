@@ -110,13 +110,13 @@ func (l *UserSliceLoader) LoadAll(keys []int) ([][]example.User, []error) {
 // LoadThunk returns a function that when called will block waiting for a users.
 // This method should be used if you want one goroutine to make requests to many
 // different data loaders without blocking until the thunk is called.
-func (l *UserSliceLoader) LoadAllThunk(keys []string) func() ([][]example.User, []error) {
+func (l *UserSliceLoader) LoadAllThunk(keys []int) func() ([][]example.User, []error) {
 	results := make([]func() ([]example.User, error), len(keys))
 
 	for i, key := range keys {
 		results[i] = l.LoadThunk(key)
 	}
-	return func() {
+	return func() ([][]example.User, []error) {
 		users := make([][]example.User, len(keys))
 		errors := make([]error, len(keys))
 		for i, thunk := range results {
