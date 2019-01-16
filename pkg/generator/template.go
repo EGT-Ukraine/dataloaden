@@ -115,13 +115,13 @@ func (l *{{.LoaderName}}) LoadAll(keys []{{.KeyType}}) ([]{{.ValType}}, []error)
 // LoadThunk returns a function that when called will block waiting for a {{.Name}}s.
 // This method should be used if you want one goroutine to make requests to many
 // different data loaders without blocking until the thunk is called.
-func (l *{{.LoaderName}}) LoadAllThunk(keys []string) (func() ([]{{.ValType}}, []error)) {
+func (l *{{.LoaderName}}) LoadAllThunk(keys []{{.KeyType}}) (func() ([]{{.ValType}}, []error)) {
 	results := make([]func() ({{.ValType}}, error), len(keys))
 
 	for i, key := range keys {
 		results[i] = l.LoadThunk(key)
 	}
-	return func(){
+	return func() ([]{{.ValType}}, []error) {
 		{{.Name}}s := make([]{{.ValType}}, len(keys))
 		errors := make([]error, len(keys))
 		for i, thunk := range results {
