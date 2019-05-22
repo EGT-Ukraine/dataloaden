@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
-	"unicode"
 
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"golang.org/x/tools/imports"
 )
@@ -24,16 +24,13 @@ type templateData struct {
 	Slice      bool
 }
 
-func Generate(typename string, keyType string, slice bool, pointer bool, wd string) error {
-	data, err := getData(typename, keyType, slice, pointer, wd)
+func Generate(loaderName string, typename string, keyType string, slice bool, pointer bool, wd string) error {
+	data, err := getData(loaderName, typename, keyType, slice, pointer, wd)
 	if err != nil {
 		return err
 	}
 
-	filename := data.Name + "loader_gen.go"
-	if data.Slice {
-		filename = data.Name + "sliceloader_gen.go"
-	}
+	filename := strcase.ToSnake(data.LoaderName) + "_gen.go"
 
 	if err := writeTemplate(filepath.Join(wd, filename), data); err != nil {
 		return err
@@ -42,28 +39,33 @@ func Generate(typename string, keyType string, slice bool, pointer bool, wd stri
 	return nil
 }
 
-func getData(typeName string, keyType string, slice bool, pointer bool, wd string) (templateData, error) {
+func getData(loaderName, typeName string, keyType string, slice bool, pointer bool, wd string) (templateData, error) {
 	var data templateData
 	parts := strings.Split(typeName, ".")
 	if len(parts) < 2 {
 		return templateData{}, fmt.Errorf("type must be in the form package.Name")
 	}
-
 	pkgData := getPackage(wd)
 	name := parts[len(parts)-1]
+
+	if loaderName == "" {
+		loaderName = name
+	}
+
 	data.Package = pkgData
-	data.LoaderName = name + "Loader"
-	data.BatchName = lcFirst(name) + "Batch"
-	data.Name = lcFirst(name)
+	data.LoaderName = loaderName
+	data.BatchName = strcase.ToLowerCamel(loaderName) + "Batch"
+	data.Name = strcase.ToLowerCamel(name)
 	data.KeyType = keyType
 	data.Slice = slice
 
 	prefix := ""
 	if slice {
 		prefix = "[]"
-		data.LoaderName = name + "SliceLoader"
-		data.BatchName = lcFirst(name) + "SliceBatch"
+		data.LoaderName += "Slice"
+		data.BatchName = strcase.ToLowerCamel(loaderName) + "SliceBatch"
 	}
+	data.LoaderName += "Loader"
 
 	if pointer {
 		prefix = prefix + "*"
@@ -106,10 +108,4 @@ func writeTemplate(filepath string, data templateData) error {
 	}
 
 	return nil
-}
-
-func lcFirst(s string) string {
-	r := []rune(s)
-	r[0] = unicode.ToLower(r[0])
-	return string(r)
 }
